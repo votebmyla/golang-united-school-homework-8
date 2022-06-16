@@ -37,7 +37,10 @@ func Perform(args Arguments, writer io.Writer) error {
 		}
 		findById(args, writer)
 	case "remove":
-		fmt.Println("this is remove operation")
+		if len(args["id"]) == 0 {
+			return errId
+		}
+		removeItem(args, writer)
 	default:
 		if len(args["operation"]) > 0 {
 			return fmt.Errorf("Operation %s not allowed!", args["operation"])
@@ -134,6 +137,41 @@ func addItem(args Arguments, writer io.Writer) error {
 	}
 	//
 
+	return nil
+}
+
+func removeItem(args Arguments, writer io.Writer) error {
+	jsonFile, err := os.Open(args["fileName"])
+	if err != nil {
+		return err
+	}
+	defer jsonFile.Close()
+	jsonFileByte, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		return err
+	}
+	var jsonFileDataArr []User
+	err = json.Unmarshal(jsonFileByte, &jsonFileDataArr)
+	if err != nil {
+		return err
+	}
+
+	for i, v := range jsonFileDataArr {
+		if v.Id == args["id"] {
+			jsonFileDataArr = append(jsonFileDataArr[:i], jsonFileDataArr[i+1:]...)
+			byteValue, err := json.Marshal(jsonFileDataArr)
+			if err != nil {
+				return err
+			}
+			err = ioutil.WriteFile(args["fileName"], byteValue, 0644)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	s := fmt.Sprintf("Item with id %s not found", args["id"])
+	writer.Write([]byte(s))
 	return nil
 }
 
